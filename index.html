@@ -1,1081 +1,364 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>Worldvision Clean Water Project</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <style>
-      body {
-        margin: 0px;
-        overflow: hidden;
-      }
-      #webglviewer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-      }
-      #donate {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom:0;
-        width: 1vw;
-        height: 1vh;
-        width: 100%;
-        height: 100%;
-        background-color: white;
-        text-align:center;
-      }
-      #container {
-        position:relative;
-        top: 30%;
-      }
-
-      #donate button {
-  -moz-box-shadow:inset 0px 1px 0px 0px #a4e271;
-  -webkit-box-shadow:inset 0px 1px 0px 0px #a4e271;
-  box-shadow:inset 0px 1px 0px 0px #a4e271;
-  background:-webkit-gradient(linear, left top, left bottom, color-stop(0.05, #89c403), color-stop(1, #77a809));
-  background:-moz-linear-gradient(top, #89c403 5%, #77a809 100%);
-  background:-webkit-linear-gradient(top, #89c403 5%, #77a809 100%);
-  background:-o-linear-gradient(top, #89c403 5%, #77a809 100%);
-  background:-ms-linear-gradient(top, #89c403 5%, #77a809 100%);
-  background:linear-gradient(to bottom, #89c403 5%, #77a809 100%);
-  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#89c403', endColorstr='#77a809',GradientType=0);
-  background-color:#89c403;
-  -moz-border-radius:6px;
-  -webkit-border-radius:6px;
-  border-radius:6px;
-  border:1px solid #74b807;
-  display:inline-block;
-  cursor:pointer;
-  color:#ffffff;
-  font-family:Arial;
-  font-size:15px;
-  font-weight:bold;
-  padding:6px 24px;
-  text-decoration:none;
-  text-shadow:0px 1px 0px #528009;
-}
-#donate button:hover {
-  background:-webkit-gradient(linear, left top, left bottom, color-stop(0.05, #77a809), color-stop(1, #89c403));
-  background:-moz-linear-gradient(top, #77a809 5%, #89c403 100%);
-  background:-webkit-linear-gradient(top, #77a809 5%, #89c403 100%);
-  background:-o-linear-gradient(top, #77a809 5%, #89c403 100%);
-  background:-ms-linear-gradient(top, #77a809 5%, #89c403 100%);
-  background:linear-gradient(to bottom, #77a809 5%, #89c403 100%);
-  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#77a809', endColorstr='#89c403',GradientType=0);
-  background-color:#77a809;
-}
-#donate button:active {
-  position:relative;
-  top:1px;
-}
-
-    </style>
-  </head>
-  <body>
-    <div id="webglviewer"></div>
-
-  <script src="js/third-party/threejs/three.js"></script>
-  <script src="js/third-party/threejs/StereoEffect.js"></script>
-  <script src="js/third-party/threejs/DeviceOrientationControls.js"></script>
-  <script src="js/third-party/threejs/OrbitControls.js"></script>
-  <script src="js/third-party/threejs/helvetiker_regular.typeface.js"></script>
-  <script type="application/x-glsl" id="sky-vertex">  
-varying vec2 vUV;
-
-void main() {  
-  vUV = uv;
-  vec4 pos = vec4(position, 1.0);
-  gl_Position = projectionMatrix * modelViewMatrix * pos;
-}
-</script>
-
-<script type="application/x-glsl" id="sky-fragment">  
-uniform sampler2D texture;  
-varying vec2 vUV;
-
-void main() {  
-  vec4 sample = texture2D(texture, vUV);
-  gl_FragColor = vec4(sample.xyz, sample.w);
-}
-</script>  
-  <script>
-    var camera, scene, renderer;
-    var effect, controls;
-    var element, container;
-    var mesh;
-
-    var clock = new THREE.Clock();
-
-    var slideTime = 10.5;
-    var slideTimer = 0;
-    slideCounter = -1;
-    var first = true;
-
-    var photos = new Array(7);
-    var text = new Array(7);
-    var currentPhoto;
-    var currentText;
-
-    var startPhotoMesh;
-    var startText;
-
-
-    var audio = new Audio('resources/appaudio.mp3');
-
-    // Start Init 
-
-
-    renderer = new THREE.WebGLRenderer();
-    element = renderer.domElement;
-    container = document.getElementById('webglviewer');
-    container.appendChild(element);
-    effect = new THREE.StereoEffect(renderer);
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.001, 700);
-    camera.position.set(0, 19, 0);
-    scene.add(camera);
-
-    controls = new THREE.OrbitControls(camera, element);
-    controls.rotateUp(THREE.Math.degToRad(15));
-    controls.target.set(
-      camera.position.x + 0.1,
-      camera.position.y,
-      camera.position.z 
-    );
-
-    controls.noZoom = true;
-    controls.noPan = true;
-
-
-    function setOrientationControls(e) {
-      if (!e.alpha) {
-        return;
-      }
-      controls = new THREE.DeviceOrientationControls(camera, true);
-      controls.connect();
-      controls.update();
-      element.addEventListener('click', fullscreen, false);
-      window.removeEventListener('deviceorientation', setOrientationControls, true);
-    }
-
-    window.addEventListener('deviceorientation', setOrientationControls, true);
-
-    var light = new THREE.HemisphereLight(0x777777, 0x000000, 0.8);
-    scene.add(light);
-    var directionalLight = new THREE.DirectionalLight( 0xffffff, 1.5 );
-    directionalLight.position.set( -15, 10, -10 );
-    directionalLight.rotation.set.x = (Math.PIP / 4);
-    directionalLight.rotation.set.y = -THREE.Math.degToRad(45);
-    scene.add( directionalLight );
-
-    // Sky Object
-    var geometry = new THREE.SphereGeometry(200, 60, 40);  
-    var uniforms = {  
-      texture: { type: 't', value: THREE.ImageUtils.loadTexture('resources/africa.jpg') }
-    };
-    
-    var material = new THREE.ShaderMaterial( {  
-      uniforms:       uniforms,
-      vertexShader:   document.getElementById('sky-vertex').textContent,
-      fragmentShader: document.getElementById('sky-fragment').textContent
-    });
-    
-    skyBox = new THREE.Mesh(geometry, material); 
-    skyBox.rotation.y= -Math.PI;
-    skyBox.scale.set(-1, 1, 1);  
-    skyBox.eulerOrder = 'XZY';  
-    skyBox.renderDepth = 1000.0;  
-    scene.add(skyBox);  
-
-    // OPENING SCENE
-
-    // Start photo object
-    var texture = new THREE.ImageUtils.loadTexture('resources/world_vision_high_res_0.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    startPhotoMesh = new THREE.Mesh(geometry, material);
-    startPhotoMesh.position.set(100,10,0);
-    startPhotoMesh.rotation.x=0;
-    startPhotoMesh.rotation.y= -Math.PI / 2;
-    scene.add(startPhotoMesh);
-
-    // Start Title
-    var data = {
-      text : "World Vision",
-      size : 4,
-      height : 1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : true,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshPhongMaterial( { color: 0x660000 } );
-
-    material.transperent = true;
-    startText = new THREE.Mesh(geometry, material);
-    startText.position.set(30,15,-15);
-    startText.rotation.x=0;
-    startText.rotation.y= -Math.PI / 2;
-    scene.add(startText);
-
-
-    // Slide Photo 1
-    var texture = new THREE.ImageUtils.loadTexture('resources/photo1.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[0] = new THREE.Mesh(geometry, material);
-    
-
-
-    // Slide 1 Text 1
-    text[0] = new Array(3)
-    var data = {
-      text : "Nearly 1,000 children under age 5 die every",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[0][0] = new THREE.Mesh(geometry, material);
-  
-
-  // Slide 1 text 2
-
-  var data = {
-      text : "day from diarrhea caused by contaminated",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[0][1] = new THREE.Mesh(geometry, material);
-    
-
-
-  // Slide 1 text 3
-  var data = {
-      text : "water, poor sanitation, and improper hygiene.",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[0][2] = new THREE.Mesh(geometry, material);
-    
-
-
-
-  // Slide Photo 2
-    var texture = new THREE.ImageUtils.loadTexture('resources/photo2.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[1] = new THREE.Mesh(geometry, material);
-    photos[1].position.set(100,10,0);
-    photos[1].rotation.x=0;
-    
-
-
-
-// Slide 2 Text 1
-    text[1] = new Array(2);
-    var data = {
-      text : "We believe the global water and sanitation",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[1][0] = new THREE.Mesh(geometry, material);
-
-
-  // Slide 2 text 2
-  var data = {
-      text : "crisis can be solved within our lifetimes",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[1][1] = new THREE.Mesh(geometry, material);
-
-
-    // Slide Photo 3
-    var texture = new THREE.ImageUtils.loadTexture('resources/photo3.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[2] = new THREE.Mesh(geometry, material);
-    photos[2].position.set(100,10,0);
-    photos[2].rotation.x=0;
-    
-
-
-
-// Slide 3 Text 1
-    text[2] = new Array(3);
-    var data = {
-      text : "We’re focused on providing clean water and",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[2][0] = new THREE.Mesh(geometry, material);
-
-
-  // Slide 3 text 2
-  var data = {
-      text : "sanitation to every man, woman, and child",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[2][1] = new THREE.Mesh(geometry, material);
-
-    // Slide 3 text 3
-  var data = {
-      text : "in every community we work in.",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[2][2] = new THREE.Mesh(geometry, material);
-
-
-    // Slide Photo 4
-    var texture = new THREE.ImageUtils.loadTexture('resources/photo4.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[3] = new THREE.Mesh(geometry, material);
-    photos[3].position.set(100,10,0);
-    photos[3].rotation.x=0;
-    
-
-
-
-// Slide 4 Text 1
-    text[3] = new Array(3);
-    var data = {
-      text : "World Vision is the leading NGO provider",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[3][0] = new THREE.Mesh(geometry, material);
-
-
-  // Slide 4 text 2
-  var data = {
-      text : "of clean water. We reach one new ",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[3][1] = new THREE.Mesh(geometry, material);
-
-    // Slide 4 text 3
-  var data = {
-      text : "person with clean water every 30 seconds. ",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[3][2] = new THREE.Mesh(geometry, material);
-  
-
-  // Slide Photo 5
-    var texture = new THREE.ImageUtils.loadTexture('resources/map.JPG');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[4] = new THREE.Mesh(geometry, material);
-    photos[4].position.set(100,10,0);
-    photos[4].rotation.x=0;
-    
-
-
-
-// Slide 5 Text 1
-    text[4] = new Array(2);
-    var data = {
-      text : "2 million people reached ",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0x00000,
-      transparent: true,
-      opacity: 1
-    } );
-    text[4][0] = new THREE.Mesh(geometry, material);
-
-
-  // Slide 5 text 2
-  var data = {
-      text : "with improved water access ",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0x000000,
-      transparent: true,
-      opacity: 1
-    } );
-    text[4][1] = new THREE.Mesh(geometry, material);
-
-
-
-    // Slide Photo 6
-    var texture = new THREE.ImageUtils.loadTexture('resources/photo6.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 1
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[5] = new THREE.Mesh(geometry, material);
-    photos[5].position.set(100,10,0);
-    photos[5].rotation.x=0;
-    
-
-
-
-// Slide 6 Text 1
-    text[5] = new Array(3);
-    var data = {
-      text : "You can help make a difference.",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[5][0] = new THREE.Mesh(geometry, material);
-
-
-  // Slide 6 text 2
-  var data = {
-      text : "Donate now to the World Vision",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[5][1] = new THREE.Mesh(geometry, material);
-
-// Slide 6 text 3
-  var data = {
-      text : "Clean Water Project.",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[5][2] = new THREE.Mesh(geometry, material);
-
-
-
-    // Slide Photo 7 TRANSPARENT
-    var texture = new THREE.ImageUtils.loadTexture('resources/photo6.jpg');
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    var material = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      specular: 0xffffff,
-      shininess: 20,
-      shading: THREE.FlatShading,
-      map: texture,
-      transparent: true,
-      opacity: 0.0
-    });
-    var geometry = new THREE.PlaneGeometry(30, 20);
-    photos[6] = new THREE.Mesh(geometry, material);
-    photos[6].position.set(100,10,0);
-    photos[6].rotation.x=0;
-    
-
-
-
-// Slide 7 Text 1
-    text[6] = new Array(8);
-    var data = {
-      text : "Please remove your phone from",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][0] = new THREE.Mesh(geometry, material);
-
-
-  // Slide 7 text 2
-  var data = {
-      text : "Google Cardboard. Or click anywhere to",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][1] = new THREE.Mesh(geometry, material);
-
-// Slide 6 text 3
-  var data = {
-      text : "play this project again.",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][2] = new THREE.Mesh(geometry, material);
-
-    // Slide 6 text 4
-  var data = {
-      text : " ",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][3] = new THREE.Mesh(geometry, material);
-
-    // Slide 6 text 4
-  var data = {
-      text : "Chief Animator: George Vine",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][4] = new THREE.Mesh(geometry, material);
-
-    // Slide 6 text 3
-  var data = {
-      text : "Chief Programmer: Benjamin Dahl",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][5] = new THREE.Mesh(geometry, material);
-
-    // Slide 6 text 5
-  var data = {
-      text : "Chief Support: Bruce Chang",
-      size : 1,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][6] = new THREE.Mesh(geometry, material);
-
-// Slide 6 text 6
-  var data = {
-      text : "(Music: www.bensound.com)",
-      size : 0.6,
-      height : 0.1,
-      curveSegments : 12,
-      font : "helvetiker",
-      weight : "normal",
-      style : "normal",
-      bevelEnabled : false,
-      bevelThickness : 0.1,
-      bevelSize : 0.2
-    };
-    var geometry = new THREE.TextGeometry( data.text, data );
-    var material = new THREE.MeshBasicMaterial( { 
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1
-    } );
-    text[6][7] = new THREE.Mesh(geometry, material);
-
-
-
-
-
-    // Setup and functions
-    window.addEventListener('resize', resize, false);
-    setTimeout(resize, 1);
-    
-    animate();
-
-
-    function resize() {
-      var width = container.offsetWidth;
-      var height = container.offsetHeight;
-
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-
-      renderer.setSize(width, height);
-      effect.setSize(width, height);
-    }
-
-    function update(dt) {
-     /*
-      if(first){
-        audio.play();
-        first = false;
-      }
-    */
-      
-      slideTimer += dt;
-      if(slideTimer >= slideTime){
-        if(currentPhoto != null){
-          scene.remove(currentPhoto);
-          for(i = 0; i < currentText.length; i++){
-            scene.remove(currentText[i]);
-          }
-        }
-
-        slideTimer = 0; 
-        slideCounter ++;
-
-        if(slideCounter == 0){
-          scene.remove(startPhotoMesh);
-          scene.remove(startText);
-        }
-        
-        if(slideCounter >=0 && slideCounter <photos.length){
-          currentPhoto = photos[slideCounter];
-          currentText = text[slideCounter]
-          scene.add(currentPhoto);
-          currentPhoto.position.set(100,10,0);
-          currentPhoto.rotation.x=0;
-          currentPhoto.rotation.y= -Math.PI / 2;
-          for(i = 0; i < currentText.length; i++){
-            currentText[i].geometry.computeBoundingBox();
-            var width = currentText[i].geometry.boundingBox.max.x;
-            currentText[i].position.set(90,15 - i*2,-(width/2));
-            currentText[i].rotation.x=0;
-            currentText[i].rotation.y= -Math.PI / 2;
-            scene.add(currentText[i]);
-
-          }
-        }
-      }
-
-      
-
-      if(slideCounter >= 0 && slideCounter < photos.length){
-        if (currentPhoto.position.x >= 30) {
-          currentPhoto.position.x -= 0.8;
-        }
-        for(i = 0; i < currentText.length; i++){
-            if(currentText[i].position.x >= 26){
-              currentText[i].position.x -= 0.8;
-            }
-        }  
-      }
-
-
-
-      resize();
-      camera.updateProjectionMatrix();
-      controls.update(dt);
-
-      if (startPhotoMesh.position.x >= 21) {
-        startPhotoMesh.position.x -= 0.8;
-        }
-      if (startText.position.x >= 20) {
-        startText.position.x -= 0.1;
-        }  
-    }
-
-    function render(dt) {
-      effect.render(scene, camera);
-    }
-
-    function animate(t) {
-      requestAnimationFrame(animate);
-      update(clock.getDelta());
-      render(clock.getDelta());
-    }
-
-    function fullscreen() {
-      if (container.requestFullscreen) {
-        container.requestFullscreen();
-      } else if (container.msRequestFullscreen) {
-        container.msRequestFullscreen();
-      } else if (container.mozRequestFullScreen) {
-        container.mozRequestFullScreen();
-      } else if (container.webkitRequestFullscreen) {
-        container.webkitRequestFullscreen();
-      }
-    }
-    window.addEventListener('click', (function(){
-    audio.pause();
-    audio.currentTime = 0;
-    audio.play();
-    first = true;
-
-    if(currentPhoto!=null){
-      scene.remove(currentPhoto);
-      for(i = 0; i < currentText.length; i++){
-        scene.remove(currentText[i]);
-      }
-    }
-    else{
-      scene.remove(startPhotoMesh);
-      scene.remove(startText);
-    }
-
-    slideTimer = 0;
-    slideCounter = -1;
-
-    startPhotoMesh.position.set(100,10,0);
-    startPhotoMesh.rotation.x=0;
-    startPhotoMesh.rotation.y= -Math.PI / 2;
-    scene.add(startPhotoMesh);
-
-    startText.position.set(30,15,-15);
-    startText.rotation.x=0;
-    startText.rotation.y= -Math.PI / 2;
-    scene.add(startText);
-
-
-
-    }).bind(this));
-
-    
-
-
-
-  
-  </script>
-  <script>
-    window.addEventListener('resize', donate, false);
-
-    function donate(){
-    screenOrientation = (window.innerWidth > window.innerHeight)? 90 : 0;
-    console.log(screenOrientation);
-    if (screenOrientation == 0) {
-      document.getElementById('donate').style.display='block';
-    }
-    }
-  </script>
-  <div id="donate" style="display:none;">
-    <div id="container">
-    <h1>Please give to the World Vision Water Project</h1>
-    <a href="http://donate.worldvision.org/ways-to-give/by-category/clean-water/"><button>Donate</button></a>
-    </div>
-  </div>
-  </body>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>George Henry Vine IV</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
+  <link rel='shortcut icon' type='image/x-icon' href='favicon.ico' />
+  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png">
+  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-72x72-precomposed.png">
+  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-114x114-precomposed.png">
+  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-144x144-precomposed.png">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/normalize.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.10.1.min.js"><\/script>')</script>
+  <script src="js/vendor/jquery.hashchange.min.js"></script>
+  <script src="js/vendor/jquery.easytabs.min.js"></script>
+
+  <script src="js/main.js"></script>
+  <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+      <script>window.html5 || document.write('<script src="js/vendor/html5shiv.js"><\/script>')</script>
+      <![endif]-->
+</head>
+  <body class="bg-fixed bg-1">
+<!--[if lt IE 7]>
+    <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+    <![endif]-->
+   <div class="main-container">
+    <div class="main wrapper clearfix">
+      <!-- Header Start -->
+        <header id="header">
+            <div id="logo">
+                <h2>
+                    George Henry Vine IV
+                </h2>
+                <h4>
+                    Computer Science Student
+                </h4>
+            </div>
+        </header>
+        <!-- Header End -->
+        <!-- Main Tab Container -->
+        <div id="tab-container" class="tab-container">
+          <!-- Tab List -->
+            <ul class='etabs'>
+                <li class='tab' id="tab-about">
+                  <a href="#about"><i class="icon-user"></i><span> About Me</span></a>
+                </li>
+                <li class='tab'>
+                  <a href="#resume"><i class="icon-file-text"></i><span> Resume</span></a>
+                </li>
+                <li class='tab'>
+                  <a href="#portfolio"><i class="icon-heart"></i><span> Portfolio</span></a>
+                </li>
+                <li class='tab'>
+                  <a href="#contact"><i class="icon-envelope"></i><span> Contact</span></a>
+                </li>
+            </ul>
+          <!-- End Tab List -->
+            <div id="tab-data-wrap">
+              <!-- About Tab Data -->
+                <div id="about">
+                    <section class="clearfix">
+                        <div class="g2">
+                            <div class="photo">
+                                <img src="images/pic.jpg" alt="George Vine">
+                            </div>
+                            <div class="info">
+                                <h2>
+                                    George Vine
+                                </h2>
+                                <h4>
+                                    Computer Science Student
+                                </h4>
+                                <p>
+                                    I'm George Vine. I am a senior at Azusa Pacific Universtiy pursuing my BS in Computer Science. I've also spent the last year
+                                    interning at the NASA/Caltech Jet Propulsion Laboratory. I'm passionate about making things that work.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="g1">
+                            <div class="main-links sidebar">
+                                <ul>
+                                    <li>
+                                        <a href="#resume">View My Resume</a>
+                                    </li>
+                                    <li>
+                                        <a href="#portfolio">My Portfolio</a>
+                                    </li>
+                                    <li>
+                                        <a href="#contact">Contact Me</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="break"></div>
+                        <div class="contact-info">
+                          <div class="g1">
+                            <div class="item-box clearfix">
+                              <i class="icon-envelope"></i>
+                              <div class="item-data">
+                                <h3><a href="mailto:george.h.vine.iv@gmail.com">george.h.vine.iv@gmail.com</a></h3>
+                                <p>Email Address</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="g1">
+                            <div class="item-box clearfix">
+                              <i class="icon-linkedin-sign"></i>
+                              <div class="item-data">
+                                <h3><a href="https://www.linkedin.com/in/georgehvineiv" target="_blank">georgehvineiv</a></h3>
+                                <p>LinkedIn Profile</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="g1">
+                            <div class="item-box clearfix">
+                              <i class="icon-github-sign"></i>
+                              <div class="item-data">
+                                <h3><a href="https://github.com/georgevine" target="_blank">georgevine</a></h3>
+                                <p>Github Profile</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                    </section><!-- content -->
+                </div>
+              <!-- End About Tab Data -->
+              <!-- Resume Tab Data -->
+                <div id="resume">
+                    <section class="clearfix">
+                        <div class="g2">
+                            <h3>
+                                Work Experience
+                            </h3>
+                            <ul class="no-list work">
+                                <li>
+                                    <h5>
+                                        Software Developer Intern, NASA/Caltech Jet Propulsion Laboratory
+                                    </h5><span class="label label-info">8/15 - Current</span>
+                                    <p>
+                                        Maintained and upgraded Python-based automated system testing framework which increased testing functionality across a wide table of tests of mission sequencing software for the Cassini mission; Worked as a member of a team to develop a virtual reality experience with Oculus Rift and an existing solar system visualization software using a Python scripting framework; Developed a dynamic web application in PHP and Javascript that greatly increased the efficiency of a Cassini mission-planning task. Did research on and built automated test cases with Selenium and QF-Test in order to weigh the utility of both tools for possible integration into an automated application testing effort.
+
+                                    </p>
+                                </li>
+                                <li>
+                                    <h5>
+                                        Systems Engineering intern, NASA/Caltech Jet Propulsion Laboratory
+                                    </h5><span class="label label-info">05/15 – 08/15</span>
+                                    <p>
+                                        Developed a SysML framework containing specific ontologies for modeling multi-mission ground data systems for NASA flight projects that is still in development for future use. Developed requirements, use cases, and constraints for multi-mission ground data systems.
+                                    </p>
+                                </li>
+                            </ul>
+                            <h3>
+                                Education
+                            </h3>
+                            <ul class="no-list work">
+                                <li>
+                                    <h5>
+                                        Azusa Pacific University
+                                    </h5><span class="label label-success">2014-2017</span>
+                                    <p>
+                                        Bachelor of Science (Computer Science), GPA: 3.3, College of Arts and Sciences Dean's List (Fall 2015)
+                                    </p>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="g1">
+                            <div class="sidebar">
+                                <h3>
+                                    Skills
+                                </h3>
+                                <div class="meter emerald">
+                                    <span style="width: 80%"><span>Python</span></span>
+                                </div>
+                                <div class="meter carrot">
+                                    <span style="width: 85%"><span>Java</span></span>
+                                </div>
+                                <div class="meter wisteria">
+                                    <span style="width: 80%"><span>Javascript</span></span>
+                                </div>
+                                <div class="meter sunflower">
+                                    <span style="width: 70%"><span>Processing</span></span>
+                                </div>
+                                <div class="meter midnight">
+                                    <span style="width: 70%"><span>PHP</span></span>
+                                </div>
+                                <div class="meter pomengrate">
+                                    <span style="width: 60%"><span>C</span></span>
+                                </div>
+                                <div class="meter sunflower">
+                                    <span style="width: 80%"><span>NodeJs</span></span>
+                                </div>
+                                <div class="meter asbestos">
+                                    <span style="width: 75%"><span>Back-End Web Dev</span></span>
+                                </div>
+                                <div class="meter emerald">
+                                    <span style="width: 70%"><span>Automated Testing</span></span>
+                                </div>
+                                <div class="meter carrot">
+                                    <span style="width: 70%"><span>High-Level System Design and Engineering</span></span>
+                                </div>
+                                <div class="meter wisteria">
+                                    <span style="width: 80%"><span>GIT</span></span>
+                                </div>
+                                <div class="meter emerald">
+                                    <span style="width: 65%"><span>SCRUM/AGILE</span></span>
+                                </div>
+                                <div class="meter asbestos">
+                                    <span style="width: 60%"><span>Graphics Programming</span></span>
+                                </div>
+                                <div class="meter emerald">
+                                    <span style="width: 45%"><span>Unity</span></span>
+                                </div>
+                                <div class="meter carrot">
+                                    <span style="width: 50%"><span>Electronics Design</span></span>
+                                </div>
+                                <div class="meter wisteria">
+                                    <span style="width: 75%"><span>Software Systems Integration</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+              <!-- End Resume Tab Data -->
+              <!-- Portfolio Tab Data -->
+                <div id="portfolio">
+                    <section class="clearfix">
+                        <div class="g1">
+                            <div class="image">
+                                <img src="images/ar.jpg" alt="ArduRover">
+                                <div class="image-overlay">
+                                    <div class="image-link">
+                                        <a href="https://github.com/georgevine/ArduRover-code" target="_blank" class="btn">ArduRover</a><br/>
+                                        <p style="color:#FFFFFF">An autonomous, obstacle-avoiding rover.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="g1">
+                            <div class="image">
+                                <img src="images/cardboard.png" alt="">
+                                <div class="image-overlay">
+                                    <div class="image-link">
+                                        <a href="https://github.com/georgevine/cardboardwater" class="btn">CardboardWater</a><br/>
+                                        <p style="color:#FFFFFF">A Google Cardboard virtual reality experience running in the browser. Made in 48 hours at a hackathon.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="g1">
+                            <div class="image">
+                                <img src="images/dash.png" alt="">
+                                <div class="image-overlay">
+                                    <div class="image-link">
+                                        <a href="https://github.com/georgevine/ArduRover_DashBoard" class="btn">ArduRover Dashboard</a><br/>
+                                        <p style="color:#FFFFFF">A serial communication dashboard for wireless command transmission to ArduRover.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="break"></div>
+                        <div class="g1">
+                            <div class="image">
+                                <img src="images/lr.png" alt="">
+                                <div class="image-overlay">
+                                    <div class="image-link">
+                                        <a href="https://github.com/georgevine/LearningRockets" class="btn">LearningRockets</a></br>
+                                        <p style="color:#FFFFFF">Rockets that utilize genetic computing to hit their target.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="g1">
+                            <div class="image">
+                                <img src="images/wi.png" alt="">
+                                <div class="image-overlay">
+                                    <div class="image-link">
+                                        <a href="https://github.com/georgevine/WhereISS" class="btn">WhereISS?</a><br/>
+                                        <p style="color:#FFFFFF">Get notified when the ISS is overhead.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="g1">
+                            <div class="image">
+                                <img src="images/pp.png" alt="">
+                                <div class="image-overlay">
+                                    <div class="image-link">
+                                        <a href="https://github.com/georgevine/Python_Playground" class="btn">Python Playground</a><br/>
+                                        <p style="color:#FFFFFF">Collection of Python projects based on famous algorithims.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
+                </div>
+              <!-- End Portfolio Data -->
+              <!-- Contact Tab Data -->
+                <div id="contact">
+                    <section class="clearfix">
+                       <div class="g1">
+                         <div class="sny-icon-box">
+                           <div class="sny-icon">
+                              <i class="icon-globe"></i>
+                            </div>
+                            <div class="sny-icon-content">
+                              <h4>My Address</h4>
+                              <p>17 Esther St. Pasadena, CA 91103</p>
+                            </div>
+                         </div>
+                       </div>
+                       <div class="g1">
+                         <div class="sny-icon-box">
+                           <div class="sny-icon">
+                              <i class="icon-phone"></i>
+                            </div>
+                            <div class="sny-icon-content">
+                              <h4>Phone</h4>
+                              <p>818-808-5435</p>
+                            </div>
+                         </div>
+                       </div>
+                       <div class="g1">
+                         <div class="sny-icon-box">
+                           <div class="sny-icon">
+                              <i class="icon-user"></i>
+                            </div>
+                            <div class="sny-icon-content">
+                              <h4>Email</h4>
+                              <p>george.h.vine.iv@gmail.com</p>
+                            </div>
+                         </div>
+                       </div>
+                       <div class="break"></div>
+
+                    </section>
+                </div>
+              <!-- End Contact Data -->
+            </div>
+        </div>
+        <!-- End Tab Container -->
+
+
+                <!http://www.mrova.com>
+
+
+    </div><!-- #main -->
+</div><!-- #main-container -->
+
+
+
+</body>
 </html>

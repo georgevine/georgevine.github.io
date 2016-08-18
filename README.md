@@ -1,2 +1,0 @@
-# cardboardwater.
-This a Google Cardboard app that was created by George Vine, Ben Dahl and Bruce Chang over 48 hours for the Code for the Kingdom 2015 Hackathon. It was created as a response to a challenge provided by the World Vision Clean Water Project to use the cardboard to move people to get involved with the project. If this project has inspired you, please donate to the Clean Water Project at www.worldvision.org/our-impact/clean-water
